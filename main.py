@@ -6,7 +6,7 @@ Project 1 - Assumptions (Given):
     - Assume 2D rectangular operation across the cross-
         section (uniform across the length)
 
-Also needed:
+Calculations:
     - Compare the time for the top center of the
         plancha to reach 250 C for each
     - Calculate stored energy at operating temperature
@@ -35,8 +35,19 @@ h_air = Q_(15, ureg.Watts / (ureg.meter**2 * ureg.Kelvin))
 T_i = 305 * ureg.Kelvin
 T_s = 250 * ureg.Celsius     # Operating Temp
 
-# Material properties (300K or 478K) - Ceramic "Fireclay brick"
+# Material properties (478K) - Ceramic "Fireclay brick"
+rho_fireclay_478 = Q_(2645, ureg.kg / ureg.meters**3)
+cp_fireclay_478 = Q_(960, ureg.Joules / (ureg.kg * ureg.Kelvin))
+k_fireclay_478 = Q_(1, ureg.Watts / (ureg.meters / ureg.Kelvin))
 
-# Material properties (300K or 478K) - Cast iron "plain carbon steel"
+# Material properties (300K) - Cast iron "plain carbon steel"
+rho_cast_iron_300 = Q_(7854, ureg.kg / ureg.meters**3)
+cp_cast_iron_300 = Q_(434, ureg.Joules / (ureg.kg * ureg.Kelvin))
+k_cast_iron_300 = Q_(60.5, ureg.Watts / (ureg.meters / ureg.Kelvin))
+alpha_cast_iron_300 = Q_(17.7 * 10**6, ureg.meters**2 / ureg.seconds)
 
-# Material properties (300K or 478K) - Aluminum
+# Material properties (300K) - Aluminum
+rho_al_300 = Q_(2702, ureg.kg / ureg.meters**3)
+cp_al_300 = Q_(903, ureg.Joules / (ureg.kg * ureg.Kelvin))
+k_al_300 = Q_(237, ureg.Watts / (ureg.meters / ureg.Kelvin))
+alpha_al_300 = Q_(97.1 * 10**6, ureg.meters**2 / ureg.seconds)
