@@ -6,9 +6,9 @@ from math import log, e
 
 
 def calc_biot(h_value=None, k_value=None, thickness=None, width=None):
-    # L_c = Volume / Surface Area
-    # Bi = h * L_c / k
-    return None
+    L_c = thickness
+    biot = h_value * L_c / k_value
+    return biot
 
 
 def calc_lumped_capacitance(T_amb=None, T_i=None, h_value=None, rho=None, thickness=None, width=None, cp=None,
@@ -33,8 +33,8 @@ def calc_lumped_capacitance(T_amb=None, T_i=None, h_value=None, rho=None, thickn
 
 def calc_stored_energy(rho=None, thickness=None, width=None, cp=None, T_i=None, T_final=None, time=None):
     # Calc energy stored at operating temp. Requires input for time to reach operating temp.
-    # E_st = rho * Vol * cp * dT/dt
-    return None
+    energy_stored_per_length = rho * width * thickness * cp * (T_final - T_i) / time
+    return energy_stored_per_length
 
 
 def calc_convection_heat_loss():
