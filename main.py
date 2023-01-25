@@ -5,20 +5,6 @@ Project 1 - Assumptions (Given):
     - Radiation is negligible
     - Assume 2D rectangular operation across the cross-
         section (uniform across the length)
-
-Calculations:
-    - Compare the time for the top center of the
-        plancha to reach 250 C for each
-    - Calculate stored energy at operating temperature
-    - Determine heat lost to convection per length at
-        operating temperature (assume uniform temp at
-        top and sides for this)
-    - Find steady-state temp of the center of the plancha
-        for each material
-    - What should applied flux be reduced to in order to
-        achieve constant operating temp?
-    - Recalculate time to reach operating temp if convective
-        HT coefficient is halved
 """
 
 from __init__ import ureg, Q_
@@ -46,13 +32,29 @@ def main():
     rho_cast_iron_300 = Q_(7854, ureg.kg / ureg.meters**3)
     cp_cast_iron_300 = Q_(434, ureg.joules / (ureg.kg * ureg.degK))
     k_cast_iron_300 = Q_(60.5, ureg.watts / (ureg.meters * ureg.degK))
-    alpha_cast_iron_300 = Q_(17.7 * 10**-6, ureg.meters**2 / ureg.seconds)
 
     # Material properties (300K) - Aluminum
     rho_al_300 = Q_(2702, ureg.kg / ureg.meters**3)
     cp_al_300 = Q_(903, ureg.joules / (ureg.kg * ureg.degK))
     k_al_300 = Q_(237, ureg.watts / (ureg.meters * ureg.degK))
-    alpha_al_300 = Q_(97.1 * 10**-6, ureg.meters**2 / ureg.seconds)
+
+    print("The material properties for Aluminum are... ")
+    print("    Conductivity: {}".format(round(k_al_300, 2)))
+    print("    Density: {}".format(round(rho_al_300, 2)))
+    print("    Specific Heat: {}".format(round(cp_al_300, 2)))
+    print("...")
+
+    print("The material properties for Cast Iron are... ")
+    print("    Conductivity: {}".format(round(k_cast_iron_300, 2)))
+    print("    Density: {}".format(round(rho_cast_iron_300, 2)))
+    print("    Specific Heat: {}".format(round(cp_cast_iron_300, 2)))
+    print("...")
+
+    print("The material properties for Ceramic are... ")
+    print("    Conductivity: {}".format(round(k_fireclay_478, 2)))
+    print("    Density: {}".format(round(rho_fireclay_478, 2)))
+    print("    Specific Heat: {}".format(round(cp_fireclay_478, 2)))
+    print("...")
 
     """
     Analysis
@@ -65,8 +67,8 @@ def main():
 
     print("The Biot numbers for each material is as follows... ")
     print("    Aluminum: {}".format(round(biot_al, 3)))
-    print("    Ceramic: {}".format(round(biot_fireclay, 3)))
     print("    Cast Iron: {}".format(round(biot_cast_iron, 3)))
+    print("    Ceramic: {}".format(round(biot_fireclay, 3)))
     print("...")
 
     """
@@ -91,8 +93,8 @@ def main():
 
     print("The time to heat to 250 degC for each material is as follows... ")
     print("    Lumped Capacitance method, Aluminum: {}".format(round(delta_t_lumped_al, 2)))
-    print("    Lumped Capacitance method, Ceramic: {}".format(round(delta_t_lumped_fireclay, 2)))
     print("    Lumped Capacitance method, Cast Iron: {}".format(round(delta_t_lumped_cast_iron, 2)))
+    print("    Lumped Capacitance method, Ceramic: {}".format(round(delta_t_lumped_fireclay, 2)))
     print("...")
 
     """
@@ -102,21 +104,28 @@ def main():
 
     # METHOD 1: LUMPED CAPACITANCE
 
-    energy_stored_lumped_al = cf.calc_stored_energy(rho=rho_al_300, thickness=thickness, width=width, cp=cp_al_300, T_i=T_i,
-                                             T_final=T_s, time=delta_t_lumped_al).to(ureg.watts / ureg.meter)
-    energy_stored_lumped_ceramic = cf.calc_stored_energy(rho=rho_fireclay_478, thickness=thickness, width=width,
-                                                         cp=cp_fireclay_478, T_i=T_i, T_final=T_s,
-                                                         time=delta_t_lumped_fireclay).to(ureg.watts / ureg.meter)
-    energy_stored_lumped_cast_iron = cf.calc_stored_energy(rho=rho_cast_iron_300, thickness=thickness, width=width,
-                                                           cp=cp_cast_iron_300, T_i=T_i, T_final=T_s,
-                                                           time=delta_t_lumped_cast_iron).to(ureg.watts / ureg.meter)
+    energy_stored_lumped_al_per_time = cf.calc_stored_energy_per_time(rho=rho_al_300, thickness=thickness, width=width,
+                                                                      cp=cp_al_300, T_i=T_i, T_final=T_s,
+                                                                      time=delta_t_lumped_al)
+    energy_stored_lumped_al = (energy_stored_lumped_al_per_time * delta_t_lumped_al).to(ureg.kjoules / ureg.meters)
+
+    energy_stored_lumped_ceramic_per_time = cf.calc_stored_energy_per_time(rho=rho_fireclay_478, thickness=thickness,
+                                                                           width=width, cp=cp_fireclay_478, T_i=T_i,
+                                                                           T_final=T_s, time=delta_t_lumped_fireclay)
+    energy_stored_lumped_ceramic = (energy_stored_lumped_ceramic_per_time * delta_t_lumped_fireclay).to(ureg.kjoules /
+                                                                                                        ureg.meters)
+
+    energy_stored_lumped_cast_iron_per_time = cf.calc_stored_energy_per_time(rho=rho_cast_iron_300, thickness=thickness,
+                                                                             width=width, cp=cp_cast_iron_300, T_i=T_i,
+                                                                             T_final=T_s, time=delta_t_lumped_cast_iron).to(ureg.watts / ureg.meter)
+    energy_stored_lumped_cast_iron = (energy_stored_lumped_cast_iron_per_time * delta_t_lumped_cast_iron).to(ureg.kjoules / ureg.meters)
 
     # TODO: Compare with Finite Difference Method
 
     print("The energy stored in the plancha when it reaches 250 degC for each material is as follows... ")
     print("    Lumped Capacitance method, Aluminum: {}".format(round(energy_stored_lumped_al, 2)))
-    print("    Lumped Capacitance method, Ceramic: {}".format(round(energy_stored_lumped_ceramic, 2)))
     print("    Lumped Capacitance method, Cast Iron: {}".format(round(energy_stored_lumped_cast_iron, 2)))
+    print("    Lumped Capacitance method, Ceramic: {}".format(round(energy_stored_lumped_ceramic, 2)))
     print("...")
 
     """
@@ -137,7 +146,7 @@ def main():
     of the center of the plancha be for each material?
     """
 
-    T_ss = cf.calc_steady_state_temp(flux=heat_flux, h_value=h_air, width=width, thickness=thickness, T_amb=T_amb)
+    T_ss = cf.calc_steady_state_temp(flux=heat_flux, h_value=h_air, width=width, thickness=thickness, T_amb=T_amb).to(ureg.degC)
 
     print("The steady state temperature for the center of the plancha for each material will be identical... ")
     print("    Steady State Temperature, all materials: {}".format(round(T_ss, 2)))
@@ -177,8 +186,8 @@ def main():
 
     print("The time to heat to 250 degC for each material with the convective heat transfer coefficient halved is... ")
     print("    Lumped Capacitance method, Aluminum: {}".format(round(delta_t_lumped_al_half_h, 2)))
-    print("    Lumped Capacitance method, Ceramic: {}".format(round(delta_t_lumped_fireclay_half_h, 2)))
     print("    Lumped Capacitance method, Cast Iron: {}".format(round(delta_t_lumped_cast_iron_half_h, 2)))
+    print("    Lumped Capacitance method, Ceramic: {}".format(round(delta_t_lumped_fireclay_half_h, 2)))
     print("...")
 
 
