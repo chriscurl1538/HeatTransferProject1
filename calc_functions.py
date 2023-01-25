@@ -32,10 +32,10 @@ def calc_lumped_capacitance(T_amb=None, T_i=None, h_value=None, rho=None, thickn
         return Exception("Error in calc_lumped_capacitance function")
 
 
-def calc_stored_energy(rho=None, thickness=None, width=None, cp=None, T_i=None, T_final=None, time=None):
+def calc_stored_energy_per_time(rho=None, thickness=None, width=None, cp=None, T_i=None, T_final=None, time=None):
     # Calc energy stored at operating temp. Requires input for time to reach operating temp.
-    energy_stored_per_length = rho * width * thickness * cp * (T_final - T_i) / time
-    return energy_stored_per_length
+    energy_stored_per_length_per_time = rho * width * thickness * cp * (T_final - T_i) / time
+    return energy_stored_per_length_per_time
 
 
 def calc_convection_heat_loss(h_value=None, thickness=None, width=None, T_amb=None, T_plancha=None):
