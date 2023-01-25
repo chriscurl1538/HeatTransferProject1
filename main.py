@@ -150,7 +150,7 @@ def main():
     """
 
     steady_state_flux_250 = cf.calc_convection_heat_loss(h_value=h_air, thickness=thickness, width=width, T_amb=T_amb,
-                                                          T_plancha=T_s)
+                                                         T_plancha=T_s)
 
     print("The flux required for steady state temperature at 250 C will be identical for each material... ")
     print("    Steady State Applied Flux, all materials: {}".format(round(steady_state_flux_250, 2)))
@@ -161,15 +161,17 @@ def main():
     250°C changed?
     """
 
-    delta_t_lumped_al_half_h = cf.calc_lumped_capacitance(T_amb=T_amb, T_i=T_i, h_value=h_air/2, thickness=thickness,
-                                                          width=width, cp=cp_al_300, flux=heat_flux, T_final=T_s)
+    delta_t_lumped_al_half_h = cf.calc_lumped_capacitance(T_amb=T_amb, T_i=T_i, h_value=h_air/2, rho=rho_al_300,
+                                                          thickness=thickness, width=width, cp=cp_al_300,
+                                                          flux=heat_flux, T_final=T_s).to(ureg.seconds)
     delta_t_lumped_fireclay_half_h = cf.calc_lumped_capacitance(T_amb=T_amb, T_i=T_i, h_value=h_air/2,
                                                                 rho=rho_fireclay_478, thickness=thickness, width=width,
-                                                                cp=cp_fireclay_478, flux=heat_flux, T_final=T_s)
+                                                                cp=cp_fireclay_478, flux=heat_flux,
+                                                                T_final=T_s).to(ureg.seconds)
     delta_t_lumped_cast_iron_half_h = cf.calc_lumped_capacitance(T_amb=T_amb, T_i=T_i, h_value=h_air/2,
                                                                  rho=rho_cast_iron_300, thickness=thickness,
                                                                  width=width, cp=cp_cast_iron_300, flux=heat_flux,
-                                                                 T_final=T_s)
+                                                                 T_final=T_s).to(ureg.seconds)
 
     # TODO: Compare with Finite Difference Method
 
