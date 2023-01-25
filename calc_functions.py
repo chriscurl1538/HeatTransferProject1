@@ -2,6 +2,7 @@
 Calculations:
 """
 
+from __init__ import ureg
 from math import log, e
 
 
@@ -37,20 +38,17 @@ def calc_stored_energy(rho=None, thickness=None, width=None, cp=None, T_i=None, 
     return energy_stored_per_length
 
 
-def calc_convection_heat_loss():
+def calc_convection_heat_loss(h_value=None, thickness=None, width=None, T_amb=None, T_plancha=None):
     # Calc heat lost to convection per length at operating temperature.
     # Assumes uniform temperature along top and sides of plancha.
-    return None
+    conv_heat_sides = 2 * h_value * thickness * (T_plancha - T_amb)
+    conv_heat_top = h_value * width * (T_plancha - T_amb)
+    conv_heat_loss_per_length = conv_heat_top + conv_heat_sides
+    return conv_heat_loss_per_length
 
 
-def calc_steady_state_temp():
+def calc_steady_state_temp(flux=None, h_value=None, thickness=None, width=None, T_amb=None):
     # Find steady state temperature of the center of the plancha
-    return None
-
-
-def calc_flux_for_const_temp():
-    # Find the flux needed to reach constant operating temp
-    return None
-
-
-
+    T_ss = T_amb + (flux * width) / (h_value * (2 * thickness + width))
+    assert T_ss.units == ureg.degK
+    return T_ss
