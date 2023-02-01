@@ -61,14 +61,36 @@ def main():
     """
 
     # Check Biot number
-    biot_al = cf.calc_biot(h_value=h_air, k_value=k_al_300, thickness=thickness, width=width)
-    biot_fireclay = cf.calc_biot(h_value=h_air, k_value=k_fireclay_478, thickness=thickness, width=width)
-    biot_cast_iron = cf.calc_biot(h_value=h_air, k_value=k_cast_iron_300, thickness=thickness, width=width)
+    biot_al = cf.calc_biot(h_value=h_air, k_value=k_al_300, thickness=thickness)
+    biot_fireclay = cf.calc_biot(h_value=h_air, k_value=k_fireclay_478, thickness=thickness)
+    biot_cast_iron = cf.calc_biot(h_value=h_air, k_value=k_cast_iron_300, thickness=thickness)
 
     print("The Biot numbers for each material is as follows... ")
     print("    Aluminum: {}".format(round(biot_al, 3)))
     print("    Cast Iron: {}".format(round(biot_cast_iron, 3)))
     print("    Ceramic: {}".format(round(biot_fireclay, 3)))
+    print("...")
+
+    # Calc Fo number
+    dx = thickness / 5
+
+    dt_al = cf.stability_analysis(h_value=h_air, k_value=k_al_300, thickness=thickness, rho=rho_al_300, cp=cp_al_300,
+                                  dx=dx)
+    dt_fireclay = cf.stability_analysis(h_value=h_air, k_value=k_fireclay_478, thickness=thickness,
+                                        rho=rho_fireclay_478, cp=cp_fireclay_478, dx=dx)
+    dt_cast_iron = cf.stability_analysis(h_value=h_air, k_value=k_cast_iron_300, thickness=thickness,
+                                         rho=rho_cast_iron_300, cp=cp_cast_iron_300, dx=dx)
+
+    fo_al = cf.calc_fo(k_value=k_al_300, rho=rho_al_300, cp=cp_al_300, delta_t=dt_al, delta_x=dx)
+    fo_fireclay = cf.calc_fo(k_value=k_fireclay_478, rho=rho_fireclay_478, cp=cp_fireclay_478, delta_t=dt_fireclay,
+                             delta_x=dx)
+    fo_cast_iron = cf.calc_fo(k_value=k_cast_iron_300, rho=rho_cast_iron_300, cp=cp_cast_iron_300,
+                              delta_t=dt_cast_iron, delta_x=dx)
+
+    print("The Fourier numbers for each material is as follows... ")
+    print("    Aluminum: {}".format(round(fo_al, 3)))
+    print("    Cast Iron: {}".format(round(fo_cast_iron, 3)))
+    print("    Ceramic: {}".format(round(fo_fireclay, 3)))
     print("...")
 
     """
@@ -89,12 +111,27 @@ def main():
                                                           thickness=thickness, width=width, cp=cp_cast_iron_300,
                                                           flux=heat_flux, T_final=T_s).to(ureg.seconds)
 
-    # TODO: Compare with Finite Difference Method
+    # METHOD 2: FINITE DIFFERENCE
+
+    delta_t_finite_diff_al = cf.calc_finite_difference(fo=fo_al, biot=biot_al, T_i=T_i, flux=heat_flux,
+                                                       k_value=k_al_300, thickness=thickness, width=width, T_amb=T_amb,
+                                                       dx=dx, dt=dt_al, T_s=T_s)
+    delta_t_finite_diff_fireclay = cf.calc_finite_difference(fo=fo_fireclay, biot=biot_fireclay, T_i=T_i,
+                                                             flux=heat_flux, k_value=k_fireclay_478,
+                                                             thickness=thickness, width=width, T_amb=T_amb, dx=dx,
+                                                             dt=dt_fireclay, T_s=T_s)
+    delta_t_finite_diff_cast_iron = cf.calc_finite_difference(fo=fo_cast_iron, biot=biot_cast_iron, T_i=T_i,
+                                                              flux=heat_flux, k_value=k_cast_iron_300,
+                                                              thickness=thickness, width=width, T_amb=T_amb, dx=dx,
+                                                              dt=dt_cast_iron, T_s=T_s)
 
     print("The time to heat to 250 degC for each material is as follows... ")
     print("    Lumped Capacitance method, Aluminum: {}".format(round(delta_t_lumped_al, 2)))
     print("    Lumped Capacitance method, Cast Iron: {}".format(round(delta_t_lumped_cast_iron, 2)))
     print("    Lumped Capacitance method, Ceramic: {}".format(round(delta_t_lumped_fireclay, 2)))
+    print("    Finite Difference method, Aluminum: {}".format(round(delta_t_finite_diff_al, 2)))
+    print("    Finite Difference method, Cast Iron: {}".format(round(delta_t_finite_diff_cast_iron, 2)))
+    print("    Finite Difference method, Ceramic: {}".format(round(delta_t_finite_diff_fireclay, 2)))
     print("...")
 
     """
@@ -118,14 +155,38 @@ def main():
     energy_stored_lumped_cast_iron_per_time = cf.calc_stored_energy_per_time(rho=rho_cast_iron_300, thickness=thickness,
                                                                              width=width, cp=cp_cast_iron_300, T_i=T_i,
                                                                              T_final=T_s, time=delta_t_lumped_cast_iron).to(ureg.watts / ureg.meter)
-    energy_stored_lumped_cast_iron = (energy_stored_lumped_cast_iron_per_time * delta_t_lumped_cast_iron).to(ureg.kjoules / ureg.meters)
+    energy_stored_lumped_cast_iron = (energy_stored_lumped_cast_iron_per_time *
+                                      delta_t_lumped_cast_iron).to(ureg.kjoules / ureg.meters)
 
-    # TODO: Compare with Finite Difference Method
+    # METHOD 2: FINITE DIFFERENCE
+
+    energy_stored_finite_diff_al_per_time = cf.calc_stored_energy_per_time(rho=rho_al_300, thickness=thickness,
+                                                                           width=width, cp=cp_al_300, T_i=T_i,
+                                                                           T_final=T_s, time=delta_t_finite_diff_al)
+    energy_stored_finite_diff_al = (energy_stored_finite_diff_al_per_time *
+                                    delta_t_finite_diff_al).to(ureg.kjoules / ureg.meters)
+    energy_stored_finite_diff_fireclay_per_time = cf.calc_stored_energy_per_time(rho=rho_fireclay_478,
+                                                                                 thickness=thickness, width=width,
+                                                                                 cp=cp_fireclay_478, T_i=T_i,
+                                                                                 T_final=T_s,
+                                                                                 time=delta_t_finite_diff_fireclay)
+    energy_stored_finite_diff_fireclay = (energy_stored_finite_diff_fireclay_per_time *
+                                          delta_t_finite_diff_fireclay).to(ureg.kjoules / ureg.meters)
+    energy_stored_finite_diff_cast_iron_per_time = cf.calc_stored_energy_per_time(rho=rho_cast_iron_300,
+                                                                                  thickness=thickness, width=width,
+                                                                                  cp=cp_cast_iron_300, T_i=T_i,
+                                                                                  T_final=T_s,
+                                                                                  time=delta_t_finite_diff_cast_iron)
+    energy_stored_finite_diff_cast_iron = (energy_stored_finite_diff_cast_iron_per_time *
+                                           delta_t_finite_diff_cast_iron).to(ureg.kjoules / ureg.meters)
 
     print("The energy stored in the plancha when it reaches 250 degC for each material is as follows... ")
     print("    Lumped Capacitance method, Aluminum: {}".format(round(energy_stored_lumped_al, 2)))
     print("    Lumped Capacitance method, Cast Iron: {}".format(round(energy_stored_lumped_cast_iron, 2)))
     print("    Lumped Capacitance method, Ceramic: {}".format(round(energy_stored_lumped_ceramic, 2)))
+    print("    Finite Difference method, Aluminum: {}".format(round(energy_stored_finite_diff_al, 2)))
+    print("    Finite Difference method, Cast Iron: {}".format(round(energy_stored_finite_diff_cast_iron, 2)))
+    print("    Finite Difference method, Ceramic: {}".format(round(energy_stored_finite_diff_fireclay, 2)))
     print("...")
 
     """
@@ -170,6 +231,8 @@ def main():
     250°C changed?
     """
 
+    # METHOD 1: LUMPED CAPACITANCE
+
     delta_t_lumped_al_half_h = cf.calc_lumped_capacitance(T_amb=T_amb, T_i=T_i, h_value=h_air/2, rho=rho_al_300,
                                                           thickness=thickness, width=width, cp=cp_al_300,
                                                           flux=heat_flux, T_final=T_s).to(ureg.seconds)
@@ -182,12 +245,36 @@ def main():
                                                                  width=width, cp=cp_cast_iron_300, flux=heat_flux,
                                                                  T_final=T_s).to(ureg.seconds)
 
-    # TODO: Compare with Finite Difference Method
+    # METHOD 2: FINITE DIFFERENCE
+
+    bi_al_half_h = cf.calc_biot(h_value=0.5*h_air, k_value=k_al_300, thickness=thickness)
+    dt_al_half_h = cf.stability_analysis(h_value=0.5*h_air, k_value=k_al_300, thickness=thickness, rho=rho_al_300,
+                                         cp=cp_al_300, dx=dx)
+    delta_t_finite_diff_al_half_h = cf.calc_finite_difference(fo=fo_al, biot=bi_al_half_h, T_i=T_i, flux=heat_flux,
+                                                              k_value=k_al_300, thickness=thickness, width=width,
+                                                              T_amb=T_amb, dx=dx, dt=dt_al_half_h, T_s=T_s)
+    biot_fireclay_half_h = cf.calc_biot(h_value=0.5*h_air, k_value=k_fireclay_478, thickness=thickness)
+    dt_fireclay_half_h = cf.stability_analysis(h_value=0.5*h_air, k_value=k_fireclay_478, thickness=thickness,
+                                               rho=rho_fireclay_478, cp=cp_fireclay_478, dx=dx)
+    delta_t_finite_diff_fireclay_half_h = cf.calc_finite_difference(fo=fo_fireclay, biot=biot_fireclay_half_h, T_i=T_i,
+                                                                    flux=heat_flux, k_value=k_fireclay_478,
+                                                                    thickness=thickness, width=width, T_amb=T_amb,
+                                                                    dx=dx, dt=dt_fireclay_half_h, T_s=T_s)
+    biot_cast_iron_half_h = cf.calc_biot(h_value=h_air*0.5, k_value=k_cast_iron_300, thickness=thickness)
+    dt_cast_iron_half_h = cf.stability_analysis(h_value=0.5*h_air, k_value=k_cast_iron_300, thickness=thickness,
+                                                rho=rho_cast_iron_300, cp=cp_cast_iron_300, dx=dx)
+    delta_t_finite_diff_cast_iron_half_h = cf.calc_finite_difference(fo=fo_cast_iron, biot=biot_cast_iron_half_h,
+                                                                     T_i=T_i, flux=heat_flux, k_value=k_cast_iron_300,
+                                                                     thickness=thickness, width=width, T_amb=T_amb,
+                                                                     dx=dx, dt=dt_cast_iron_half_h, T_s=T_s)
 
     print("The time to heat to 250 degC for each material with the convective heat transfer coefficient halved is... ")
     print("    Lumped Capacitance method, Aluminum: {}".format(round(delta_t_lumped_al_half_h, 2)))
     print("    Lumped Capacitance method, Cast Iron: {}".format(round(delta_t_lumped_cast_iron_half_h, 2)))
     print("    Lumped Capacitance method, Ceramic: {}".format(round(delta_t_lumped_fireclay_half_h, 2)))
+    print("    Finite Difference method, Aluminum: {}".format(round(delta_t_finite_diff_al_half_h, 2)))
+    print("    Finite Difference method, Cast Iron: {}".format(round(delta_t_finite_diff_cast_iron_half_h, 2)))
+    print("    Finite Difference method, Ceramic: {}".format(round(delta_t_finite_diff_fireclay_half_h, 2)))
     print("...")
 
 
