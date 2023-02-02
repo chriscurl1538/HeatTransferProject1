@@ -43,16 +43,16 @@ def calc_lumped_capacitance(T_amb=None, T_i=None, h_value=None, rho=None, thickn
     This function finds the time required to reach T_final OR the temperature at the given time value.
     Assumes no energy generation. Surface area is the top surface of the plancha only.
     """
-    a = (h_value * width) / (rho * thickness * width * cp)
-    b = (flux * width) / (rho * thickness * width * cp)
+    a = ((h_value * width) / (rho * thickness * width * cp)).to(1 / ureg.seconds)
+    b = ((flux * width) / (rho * thickness * width * cp)).to(ureg.degK / ureg.seconds)
     if time is None:
         # Solve for time
-        t = log((T_final - T_amb - (b / a)) / (T_i - T_amb - (b / a))) * (-1 / a)
+        t = (log((T_final - T_amb - (b / a)) / (T_i - T_amb - (b / a))) * (-1 / a)).to(ureg.seconds)
         return t
     elif T_final is None:
         # Solve for T_final
-        Temp = (T_i - T_amb) * e ** (-a * time) + (b / a) / (T_i - T_amb) * (1 - e ** (-a * time)) + T_amb
-        return Temp
+        temp = ((T_i - T_amb - b/a) * e**(-a * time) + (b / a) + T_amb).to(ureg.degK)
+        return temp
     else:
         return Exception("Error in calc_lumped_capacitance function")
 
@@ -82,92 +82,69 @@ def calc_steady_state_temp(flux=None, h_value=None, thickness=None, width=None, 
 def calc_finite_difference(fo=None, biot=None, T_i=None, flux=None, k_value=None, thickness=None,
                            width=None, T_amb=None, dx=None, time=Q_(3100, ureg.seconds), dt=None, T_s=None):
     # Find time to reach T_s at center of plancha surface
-    temp_arr_list = []
-    new_temp_arr_list = []
+    temp_arr = np.full(shape=[3, 135], fill_value=T_i) * ureg.degK
+    new_temp_arr = np.full(shape=[3, 135], fill_value=T_i) * ureg.degK
 
-    # Testing
+    plot_times_list = []
+    plot_temps_list = []
+    time_to_operating_temp = 0
+
+    # Constants
     rows = int(thickness.magnitude / dx.magnitude)
     cols = int(width.magnitude / dx.magnitude)
     times = int(time.magnitude / dt.magnitude)
-    print(dt)
-    print(time)
 
-    for t in range(times):
-        # Testing
-        print(t * dt)
-
-        # Set initial values
-        if t == 0:
-            for i in range(rows):
-                col = []
-                for j in range(cols):
-                    temp = T_i
-                    col.append(temp)
-                temp_arr_list.append(col)
-            temp_arr = np.array(temp_arr_list, dtype=object)
-            temp_arr_list = []
-
+    for t in range(1, times):
         # Calculate p+1 values
         for i in range(rows):   # y-dir
-            col = []
             for j in range(cols):   # x-dir
                 if j == 0 and i == 0:   # BLC
-                    temp_next = fo / 2 * (temp_arr[i, j + 1] + temp_arr[i + 1, j] + biot * T_amb) + \
-                                    (1 - fo - 0.5 * biot * fo) * temp_arr[i, j] + dx / k_value * fo * flux
-                    col.append(temp_next.to(ureg.degK))
+                    new_temp_arr[i, j] = (fo / 2 * (temp_arr[i, j + 1] + temp_arr[i + 1, j] + biot * T_amb) +
+                                          (1 - fo - 0.5 * biot * fo) * temp_arr[i, j] + dx / k_value * fo * flux).to(ureg.degK)
                 elif j == cols-1 and i == 0:    # BRC
-                    temp_next = fo / 2 * (temp_arr[i, j - 1] + temp_arr[i + 1, j] + biot * T_amb) + \
-                                    (1 - fo - 0.5 * biot * fo) * temp_arr[i, j] + dx / k_value * fo * flux
-                    col.append(temp_next.to(ureg.degK))
+                    new_temp_arr[i, j] = (fo / 2 * (temp_arr[i, j - 1] + temp_arr[i + 1, j] + biot * T_amb) +
+                                          (1 - fo - 0.5 * biot * fo) * temp_arr[i, j] + dx / k_value * fo * flux).to(ureg.degK)
                 elif 0 < j < cols-1 and i == 0:     # Bottom
-                    temp_next = fo / 2 * (temp_arr[i, j + 1] + temp_arr[i, j - 1] + 4 * temp_arr[i + 1, j]) + \
-                                        temp_arr[i, j] * (1 - 3 * fo) + dx / k_value * fo * flux
-                    col.append(temp_next.to(ureg.degK))
+                    new_temp_arr[i, j] = (fo / 2 * (temp_arr[i, j + 1] + temp_arr[i, j - 1] + 4 * temp_arr[i + 1, j]) +
+                                          temp_arr[i, j] * (1 - 3 * fo) + dx / k_value * fo * flux).to(ureg.degK)
                 elif j == 0 and i == rows-1:    # TLC
-                    temp_next = 2 * fo * (temp_arr[i, j + 1] + temp_arr[i - 1, j] + 2 * biot * T_amb) + \
-                                    (1 - 4 * fo - 4 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next.to(ureg.degK))
+                    new_temp_arr[i, j] = (2 * fo * (temp_arr[i, j + 1] + temp_arr[i - 1, j] + 2 * biot * T_amb) +
+                                          (1 - 4 * fo - 4 * biot * fo) * temp_arr[i, j]).to(ureg.degK)
                 elif j == cols-1 and i == rows-1:   # TRC
-                    temp_next = 2 * fo * (temp_arr[i, j - 1] + temp_arr[i - 1, j] + 2 * biot * T_amb) + \
-                                    (1 - 4 * fo - 4 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next.to(ureg.degK))
+                    new_temp_arr[i, j] = (2 * fo * (temp_arr[i, j - 1] + temp_arr[i - 1, j] + 2 * biot * T_amb) +
+                                          (1 - 4 * fo - 4 * biot * fo) * temp_arr[i, j]).to(ureg.degK)
                 elif 0 < j < cols-1 and i == rows-1:    # Top
-                    temp_next = fo * (temp_arr[i - 1, j] + temp_arr[i, j - 1] + temp_arr[i, j + 1] + 2 * biot * T_amb) + \
-                                    (1 - 4 * fo - 2 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next.to(ureg.degK))
+                    new_temp_arr[i, j] = (fo * (temp_arr[i - 1, j] + temp_arr[i, j - 1] + temp_arr[i, j + 1] + 2 *
+                                                biot * T_amb) + (1 - 4 * fo - 2 * biot * fo) * temp_arr[i, j]).to(ureg.degK)
                 elif j == 0 and 0 < i < rows-1:     # Left
-                    temp_next = fo * (2 * temp_arr[i, j + 1] + temp_arr[i + 1, j] + temp_arr[i - 1, j] +
-                                           2 * biot * T_amb) + (1 - 4 * fo - 2 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next.to(ureg.degK))
+                    new_temp_arr[i, j] = (fo * (2 * temp_arr[i, j + 1] + temp_arr[i + 1, j] + temp_arr[i - 1, j] +
+                                                2 * biot * T_amb) + (1 - 4 * fo - 2 * biot * fo) * temp_arr[i, j]).to(ureg.degK)
                 elif j == cols-1 and 0 < i < rows-1:   # Right
-                    temp_next = fo * (2 * temp_arr[i, j - 1] + temp_arr[i + 1, j] + temp_arr[i - 1, j] +
-                                            2 * biot * T_amb) + (1 - 4 * fo - 2 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next.to(ureg.degK))
+                    new_temp_arr[i, j] = (fo * (2 * temp_arr[i, j - 1] + temp_arr[i + 1, j] + temp_arr[i - 1, j] +
+                                                2 * biot * T_amb) + (1 - 4 * fo - 2 * biot * fo) * temp_arr[i, j]).to(ureg.degK)
                 elif 0 < j < cols-1 and 0 < i < rows-1:   # Interior
-                    temp_next = fo * (temp_arr[i, j + 1] + temp_arr[i, j - 1] + temp_arr[i + 1, j] +
-                                               temp_arr[i - 1, j]) + (1 - 4 * fo) * temp_arr[i, j]
-                    col.append(temp_next.to(ureg.degK))
+                    new_temp_arr[i, j] = (fo * (temp_arr[i, j + 1] + temp_arr[i, j - 1] + temp_arr[i + 1, j] +
+                                                temp_arr[i - 1, j]) + (1 - 4 * fo) * temp_arr[i, j]).to(ureg.degK)
                 else:
                     Exception('Error in finite difference function')
 
-            new_temp_arr_list.append(col)
+        # Save time and top center temp value
+        top_center_temp = temp_arr[rows-1, int(0.5*(cols-1))]
+        plot_temps_list.append(top_center_temp)
+        plot_time = t * dt
+        plot_times_list.append(plot_time)
 
-        # Move list p+1 values to numpy array and clear list
-        new_temp_arr = np.array(new_temp_arr_list, dtype=object)
-        new_temp_arr_list = []
+        # Check if operating temp has been reached
+        if top_center_temp >= T_s:
+            time_to_operating_temp = t * dt
 
         # Move p+1 values to p array
         for i in range(rows):
             for j in range(cols):
                 temp_arr[i, j] = new_temp_arr[i, j]
 
-        # Check if operating temp has been reached
-        top_center_temp = (temp_arr[rows-1, int(0.5*(cols-1))]).to(ureg.degK)
-        if top_center_temp >= T_s:
-            return t * dt
-
-    top_center_temp = (temp_arr[rows-1, int((cols-1)*0.5)]).to(ureg.degK)
-    return top_center_temp
+    top_center_temp = temp_arr[rows-1, int((cols-1)*0.5)]
+    return time_to_operating_temp, top_center_temp, plot_times_list, plot_temps_list
 
 
 if __name__ == "__main__":
