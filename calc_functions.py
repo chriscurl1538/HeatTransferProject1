@@ -33,7 +33,7 @@ def stability_analysis(h_value=None, k_value=None, thickness=None, rho=None, cp=
 
 def calc_fo(k_value=None, rho=None, cp=None, delta_t=None, delta_x=None):
     alpha = k_value / (rho * cp)
-    fo = alpha * delta_t / (delta_x ** 2)
+    fo = (alpha * delta_t / (delta_x ** 2)).to('dimensionless')
     return fo
 
 
@@ -80,7 +80,7 @@ def calc_steady_state_temp(flux=None, h_value=None, thickness=None, width=None, 
 
 
 def calc_finite_difference(fo=None, biot=None, T_i=None, flux=None, k_value=None, thickness=None,
-                           width=None, T_amb=None, dx=None, time=Q_(600, ureg.seconds), dt=None, T_s=None):
+                           width=None, T_amb=None, dx=None, time=Q_(3100, ureg.seconds), dt=None, T_s=None):
     # Find time to reach T_s at center of plancha surface
     temp_arr_list = []
     new_temp_arr_list = []
@@ -89,8 +89,13 @@ def calc_finite_difference(fo=None, biot=None, T_i=None, flux=None, k_value=None
     rows = int(thickness.magnitude / dx.magnitude)
     cols = int(width.magnitude / dx.magnitude)
     times = int(time.magnitude / dt.magnitude)
+    print(dt)
+    print(time)
 
     for t in range(times):
+        # Testing
+        print(t * dt)
+
         # Set initial values
         if t == 0:
             for i in range(rows):
@@ -100,67 +105,69 @@ def calc_finite_difference(fo=None, biot=None, T_i=None, flux=None, k_value=None
                     col.append(temp)
                 temp_arr_list.append(col)
             temp_arr = np.array(temp_arr_list, dtype=object)
+            temp_arr_list = []
 
+        # Calculate p+1 values
         for i in range(rows):   # y-dir
             col = []
             for j in range(cols):   # x-dir
                 if j == 0 and i == 0:   # BLC
                     temp_next = fo / 2 * (temp_arr[i, j + 1] + temp_arr[i + 1, j] + biot * T_amb) + \
                                     (1 - fo - 0.5 * biot * fo) * temp_arr[i, j] + dx / k_value * fo * flux
-                    col.append(temp_next)
+                    col.append(temp_next.to(ureg.degK))
                 elif j == cols-1 and i == 0:    # BRC
                     temp_next = fo / 2 * (temp_arr[i, j - 1] + temp_arr[i + 1, j] + biot * T_amb) + \
                                     (1 - fo - 0.5 * biot * fo) * temp_arr[i, j] + dx / k_value * fo * flux
-                    col.append(temp_next)
+                    col.append(temp_next.to(ureg.degK))
                 elif 0 < j < cols-1 and i == 0:     # Bottom
                     temp_next = fo / 2 * (temp_arr[i, j + 1] + temp_arr[i, j - 1] + 4 * temp_arr[i + 1, j]) + \
                                         temp_arr[i, j] * (1 - 3 * fo) + dx / k_value * fo * flux
-                    col.append(temp_next)
+                    col.append(temp_next.to(ureg.degK))
                 elif j == 0 and i == rows-1:    # TLC
                     temp_next = 2 * fo * (temp_arr[i, j + 1] + temp_arr[i - 1, j] + 2 * biot * T_amb) + \
                                     (1 - 4 * fo - 4 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next)
+                    col.append(temp_next.to(ureg.degK))
                 elif j == cols-1 and i == rows-1:   # TRC
                     temp_next = 2 * fo * (temp_arr[i, j - 1] + temp_arr[i - 1, j] + 2 * biot * T_amb) + \
                                     (1 - 4 * fo - 4 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next)
+                    col.append(temp_next.to(ureg.degK))
                 elif 0 < j < cols-1 and i == rows-1:    # Top
                     temp_next = fo * (temp_arr[i - 1, j] + temp_arr[i, j - 1] + temp_arr[i, j + 1] + 2 * biot * T_amb) + \
                                     (1 - 4 * fo - 2 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next)
+                    col.append(temp_next.to(ureg.degK))
                 elif j == 0 and 0 < i < rows-1:     # Left
                     temp_next = fo * (2 * temp_arr[i, j + 1] + temp_arr[i + 1, j] + temp_arr[i - 1, j] +
                                            2 * biot * T_amb) + (1 - 4 * fo - 2 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next)
+                    col.append(temp_next.to(ureg.degK))
                 elif j == cols-1 and 0 < i < rows-1:   # Right
                     temp_next = fo * (2 * temp_arr[i, j - 1] + temp_arr[i + 1, j] + temp_arr[i - 1, j] +
                                             2 * biot * T_amb) + (1 - 4 * fo - 2 * biot * fo) * temp_arr[i, j]
-                    col.append(temp_next)
+                    col.append(temp_next.to(ureg.degK))
                 elif 0 < j < cols-1 and 0 < i < rows-1:   # Interior
                     temp_next = fo * (temp_arr[i, j + 1] + temp_arr[i, j - 1] + temp_arr[i + 1, j] +
                                                temp_arr[i - 1, j]) + (1 - 4 * fo) * temp_arr[i, j]
-                    col.append(temp_next)
+                    col.append(temp_next.to(ureg.degK))
                 else:
                     Exception('Error in finite difference function')
 
             new_temp_arr_list.append(col)
 
+        # Move list p+1 values to numpy array and clear list
         new_temp_arr = np.array(new_temp_arr_list, dtype=object)
+        new_temp_arr_list = []
 
-        # Check if operating temp has been reached
-        if time is None:
-            top_center_temp = new_temp_arr[rows-1, int(0.5*(cols-1))]
-            if top_center_temp >= T_s:
-                return t * dt
-
-        # Update temperature array
+        # Move p+1 values to p array
         for i in range(rows):
             for j in range(cols):
                 temp_arr[i, j] = new_temp_arr[i, j]
 
-    if T_s is None:
-        top_center_temp = temp_arr[rows-1, int((cols-1)*0.5)]
-        return top_center_temp
+        # Check if operating temp has been reached
+        top_center_temp = (temp_arr[rows-1, int(0.5*(cols-1))]).to(ureg.degK)
+        if top_center_temp >= T_s:
+            return t * dt
+
+    top_center_temp = (temp_arr[rows-1, int((cols-1)*0.5)]).to(ureg.degK)
+    return top_center_temp
 
 
 if __name__ == "__main__":
